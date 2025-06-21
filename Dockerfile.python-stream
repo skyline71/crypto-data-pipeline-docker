@@ -1,0 +1,16 @@
+FROM python:3.10-slim
+
+# Установка зависимостей для MariaDB Connector/C
+RUN apt-get update && apt-get install -y \
+    libmariadb-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY stream_from_mariadb.py .
+COPY requirements.txt .
+
+# Установка Python-зависимостей
+RUN pip install --no-cache-dir -r requirements.txt
+
+CMD ["python", "stream_from_mariadb.py"]

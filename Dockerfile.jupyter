@@ -1,0 +1,43 @@
+FROM jupyter/pyspark-notebook:latest
+
+USER root
+
+# Установка Java 8 и зависимостей
+RUN apt-get update && apt-get install -y \
+    openjdk-8-jdk \
+    libmariadb-dev \
+    gcc \
+    wget \
+    netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Настройка переменных окружения Java
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV LD_LIBRARY_PATH=${JAVA_HOME}/lib/server:${LD_LIBRARY_PATH}
+RUN ln -s ${JAVA_HOME}/lib/server/libjvm.so /usr/lib/libjvm.so
+
+# Установка Hadoop
+ENV HADOOP_VERSION=2.7.7
+ENV HADOOP_HOME=/usr/local/hadoop
+ENV PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+RUN wget https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz && \
+    tar -xzf hadoop-${HADOOP_VERSION}.tar.gz -C /usr/local && \
+    mv /usr/local/hadoop-${HADOOP_VERSION} $HADOOP_HOME && \
+    rm hadoop-${HADOOP_VERSION}.tar.gz && \
+    echo "export JAVA_HOME=${JAVA_HOME}" >> $HADOOP_HOME/etc/hadoop/hadoop-env.sh
+
+# Копирование конфигураций
+COPY hive-conf/hive-site.xml /opt/spark/conf/
+COPY core-site.xml /opt/spark/conf/
+
+# Установка Python-библиотек
+RUN pip install --no-cache-dir \
+    pyarrow==12.0.1 \
+    pandas==1.5.3 \
+    numpy==1.23.5 \
+    polars==1.7.1 \
+    matplotlib==3.9.2 \
+    seaborn==0.13.2
+
+USER $NB_UID
+WORKDIR /home/jovyan/work

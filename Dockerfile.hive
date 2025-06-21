@@ -1,0 +1,41 @@
+FROM debian:stretch-slim
+
+RUN echo "deb http://archive.debian.org/debian stretch main" > /etc/apt/sources.list && \
+    echo "deb http://archive.debian.org/debian-security stretch/updates main" >> /etc/apt/sources.list && \
+    apt-get update && apt-get install -y \
+    wget \
+    openjdk-8-jdk \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV HADOOP_VERSION=2.7.7
+ENV HIVE_VERSION=2.1.1
+ENV HADOOP_HOME=/usr/local/hadoop
+ENV HIVE_HOME=/opt/hive
+ENV PATH=$PATH:$HADOOP_HOME/bin:$HIVE_HOME/bin
+
+RUN wget https://archive.apache.org/dist/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz && \
+    tar -xzf hadoop-${HADOOP_VERSION}.tar.gz -C /usr/local && \
+    mv /usr/local/hadoop-${HADOOP_VERSION} ${HADOOP_HOME} && \
+    rm hadoop-${HADOOP_VERSION}.tar.gz
+
+RUN wget https://archive.apache.org/dist/hive/hive-${HIVE_VERSION}/apache-hive-${HIVE_VERSION}-bin.tar.gz && \
+    tar -xzf apache-hive-${HIVE_VERSION}-bin.tar.gz -C /opt && \
+    mv /opt/apache-hive-${HIVE_VERSION}-bin ${HIVE_HOME} && \
+    rm apache-hive-${HIVE_VERSION}-bin.tar.gz && \
+    chmod +x ${HIVE_HOME}/bin/hive ${HIVE_HOME}/bin/hiveserver2
+
+RUN wget https://downloads.mariadb.com/Connectors/java/connector-java-1.2.3/mariadb-java-client-1.2.3.jar && \
+    mv mariadb-java-client-1.2.3.jar ${HIVE_HOME}/lib/ && \
+    chmod 644 ${HIVE_HOME}/lib/mariadb-java-client-1.2.3.jar
+
+RUN rm -f ${HADOOP_HOME}/share/hadoop/common/lib/slf4j-log4j12-1.7.10.jar
+
+COPY hive-conf/ ${HIVE_HOME}/conf/
+
+RUN chmod -R 755 ${HADOOP_HOME} ${HIVE_HOME}
+
+EXPOSE 9083 10000 10002
+
+CMD ["bash"]
